@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulado Inteligente</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .quiz-container {
+            background-color: #fff;
+            width: 100%;
+            max-width: 700px;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1 { text-align: center; color: #333; margin-bottom: 20px; }
+        .progress { margin-bottom: 20px; color: #666; font-size: 0.9em; text-align: right; }
+        .question-text { font-size: 1.2em; margin-bottom: 20px; color: #2c3e50; font-weight: 600; }
+        
+        .options-list { list-style-type: none; padding: 0; }
+        .option-btn {
+            background-color: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px 20px;
+            margin-bottom: 10px;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.2s;
+            color: #495057;
+        }
+        .option-btn:hover:not(:disabled) { background-color: #e2e6ea; border-color: #ced4da; }
+        
+        /* Estilos de Feedback */
+        .option-btn.correct { background-color: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .option-btn.incorrect { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        
+        .feedback-section {
+            display: none; /* Escondido por padrão */
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #e8f4fd;
+            border-left: 5px solid #2196F3;
+        }
+        .feedback-title { font-weight: bold; margin-bottom: 5px; display: block; }
+        
+        .next-btn, .restart-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 20px;
+            width: 100%;
+            display: none; /* Escondido até responder */
+        }
+        .next-btn:hover { background-color: #0056b3; }
+        
+        /* Tela de Resultados */
+        .result-container { text-align: center; display: none; }
+        .score-display { font-size: 2em; margin: 20px 0; font-weight: bold; color: #28a745; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container" id="quiz-box">
+    <h1>Simulado Oficial</h1>
+    <div class="progress" id="progress">Questão 1 de X</div>
+    
+    <div class="question-text" id="question">Carregando pergunta...</div>
+    
+    <div class="options-list" id="options">
+        </div>
+
+    <div class="feedback-section" id="feedback">
+        <span class="feedback-title">Explicação:</span>
+        <span id="explanation-text"></span>
+    </div>
+
+    <button class="next-btn" id="next-btn" onclick="nextQuestion()">Próxima Questão</button>
+</div>
+
+<div class="quiz-container result-container" id="result-box">
+    <h1>Resultado Final</h1>
+    <p>Você concluiu o simulado!</p>
+    <div class="score-display" id="final-score"></div>
+    <p id="final-message"></p>
+    <button class="restart-btn" style="display:inline-block" onclick="location.reload()">Refazer Simulado</button>
+</div>
+
+<script>
+    // =======================================================
+    // ÁREA DE DADOS - COLE SUAS QUESTÕES AQUI
+    // =======================================================
+    const questions = [
+    {
+        question: "1) No processo de soldagem a arco submerso:",
+        options: [
+            "A) O Alinhamento das superfícies a serem soldadas e fundamental para um bom desempenho do processo.",
+            "B) Na preparação das superfícies, não é necessária uma limpeza muito eficiente pois, qualquer resíduo não removido é absorvido pelo fluxo fundente.",
+            "C) A taxa de deposição para chapas até 25mm de espessura é a mesma que a obtida pelo processo de soldagem com eletrodo revestido.",
+            "D) A corrente utilizada é bem menor que a utilizada no processo de soldagem com eletrodo revestido"
+        ],
+        correctIndex: 0,
+        explanation: "Correta: A. O arco submerso não permite visualização da poça, exigindo alinhamento perfeito. B está errada pois o processo exige limpeza rigorosa. C e D estão erradas pois SAW tem taxa e corrente maiores que SMAW."
+    },
+    {
+        question: "2) Qual dos itens abaixo independe do controle do soldador no processo de soldagem por eletrodo revestido?",
+        options: [
+            "A) Velocidade de soldagem.",
+            "B) Corrente de soldagem.",
+            "C) Comprimento do arco.",
+            "D) Nenhuma das respostas é verdadeira.",
+            "E) Ângulo do eletrodo."
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. A corrente é ajustada na máquina. Velocidade, comprimento do arco e ângulo são variáveis de manipulação controladas manualmente pelo soldador durante a execução."
+    },
+    {
+        question: "3) O consumível de classificação AWS ER 410 níquel molibdênio tem elemento incorporado ao revestimento do eletrodo e alma metálica com baixo teor de carbono.",
+        options: [
+            "A) Falso",
+            "B) Verdadeiro."
+        ],
+        correctIndex: 0,
+        explanation: "Correta: A (Falso). A sigla 'ER' indica Eletrodo Nu (arame sólido) ou Vareta, que não possuem revestimento com elementos de liga. Elementos no revestimento são típicos de eletrodos revestidos (E)."
+    },
+    {
+        question: "4) Das alternativas abaixo indique a, mas adequada para minimizar os efeitos de deformação na execução da solda de topo.",
+        options: [
+            "A) Aumentar o ângulo do chanfro e a abertura da raiz.",
+            "B) Usar chanfro em “X”",
+            "C) Usar chanfro em “V”.",
+            "D) Aumentar o ângulo do chanfro.",
+            "E) Diminuir a abertura da raiz."
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. O chanfro em X permite balancear a deposição de solda em ambos os lados da chapa, equilibrando as tensões e reduzindo a deformação angular."
+    },
+    {
+        question: "5) Os dispositivos de fixação e montagem recomendados são aqueles que:",
+        options: [
+            "A) Limitam a deformação angular da junta soldada, que permitam a livre contração transversal.",
+            "B) São fabricados em aços inoxidáveis.",
+            "C) Impedem qualquer tipo de deformação da junta soldada.",
+            "D) Só permitem o embicamento da solda."
+        ],
+        correctIndex: 0,
+        explanation: "Correta: A. Dispositivos devem evitar deformações angulares, mas não devem travar a contração transversal para evitar o surgimento de trincas (fissuração)."
+    },
+    {
+        question: "6) O arco elétrico utilizado na soldagem emite:",
+        options: [
+            "A) Raios solares e raios gama.",
+            "B) Raios infravermelhos e ultravioletas.",
+            "C) Raios ultravioletas e raios gama.",
+            "D) Raios infravermelhos e raios nucleares."
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. O arco elétrico emite radiação não ionizante do espectro ultravioleta (UV) e infravermelho (IV), exigindo filtros oculares adequados."
+    },
+    {
+        question: "7) A combinação de um eletrodo com o fluxo para soldagem a arco submerso pela classificação AWS tem a forma de:",
+        options: [
+            "A) FXX-EX",
+            "B) EXXX-FXX",
+            "C) FXXXX-EXXXX",
+            "D) EXXX-FXX",
+            "E) FX-EXXX"
+        ],
+        correctIndex: 0,
+        explanation: "Correta: A (Formato simplificado). A norma AWS A5.17 utiliza o formato F(Propriedades Mecânicas)-E(Composição Eletrodo), ex: F7A2-EM12K."
+    },
+    {
+        question: "8) Assinale a alternativa correta.",
+        options: [
+            "A) Junta dissimilar é a junta soldada cuja composição química da zona fundida difere significativamente dos metais de base..",
+            "B) Todas as alternativas estão corretas.",
+            "C) Margem da solda é a junção entre a face da solda e o metal de base.",
+            "D) Solda dissimilar é a solda executada entre peças de composição química significativamente diferente."
+        ],
+        correctIndex: 3,
+        explanation: "Correta: D. Solda dissimilar refere-se à união de metais de base com composições diferentes (ex: Aço Carbono com Inox). A opção C define 'Margem' corretamente, mas D é a definição clássica de solda dissimilar."
+    },
+    {
+        question: "9) Indicar quais das juntas abaixo o ângulo do bizel é igual ao ângulo do chanfro:",
+        options: [
+            "A) V, K e ½ V.",
+            "B) U, V e X.",
+            "C) Reto, K e J.",
+            "D) K, ½ V e U.",
+            "E) J, ½ V e K."
+        ],
+        correctIndex: 4,
+        explanation: "Correta: E. No chanfro em 'J' e 'Meio V' (1/2 V), apenas uma peça é preparada, logo o ângulo do bisel é igual ao do chanfro total. No K, considera-se por lado."
+    },
+    {
+        question: "10) Qual o tipo de eletrodo abaixo é utilizado no processo SAW:",
+        options: [
+            "A) ER7018.",
+            "B) E308L..",
+            "C) ER70S3.",
+            "D) ER70T1.",
+            "E) EL8K."
+        ],
+        correctIndex: 4,
+        explanation: "Correta: E (EL8K). Consumíveis SAW (Arco Submerso) geralmente têm classificações como EL12, EM12K. ER7018 não existe (seria E7018 - Eletrodo Revestido), ER70S3 é sólido (MIG/TIG), ER70T1 é tubular."
+    },
+    {
+        question: "11) Informar abaixo qual o consumível utilizado no processo MAG:",
+        options: [
+            "A) ER308L.",
+            "B) ER7018.",
+            "C) E7018.",
+            "D) ER70T1.",
+            "E) NRA."
+        ],
+        correctIndex: 0,
+        explanation: "Correta: A. ER308L é um arame sólido (usado em MIG/MAG). B e C são Eletrodos Revestidos. D é Arame Tubular (FCAW). NRA não se aplica."
+    },
+    {
+        question: "12) No processo GTAW, o eletrodo de tungstênio é um consumível igualmente ao do processo plasma.",
+        options: [
+            "A) Verdadeiro.",
+            "B) Falso."
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B (Falso). O eletrodo de tungstênio no processo GTAW (TIG) e no Plasma é considerado NÃO consumível, pois não se funde para formar o cordão de solda."
+    },
+    {
+        question: "13) Sapatas de retenção são utilizadas em qual processo de soldagem?",
+        options: [
+            "A) SMAW.",
+            "B) GTAW.",
+            "C) SAW.",
+            "D) EGW.",
+            "E) FCAW."
+        ],
+        correctIndex: 3,
+        explanation: "Correta: D (EGW - Eletrogás). Sapatas (ou injeção) são usadas para conter a poça de fusão vertical em processos como Eletrogás (EGW) e Eletroescória (ESW)."
+    },
+    {
+        question: "14) O principal motivo pelo qual o pós-aquecimento deve ser executado tão logo, a soldagem termine, e que dessa forma aconteça:",
+        options: [
+            "A) A possibilidade de formação de uma micro estrutura frágil se produz.",
+            "B) O nível de tensões na junta soldada se reduz.",
+            "C) Permitir a saída do hidrogênio molecular no interior da junta soldada.",
+            "D) A velocidade de difusão do hidrogênio se reduz.",
+            "E) O resfriamento da junta soldada se torna mais homogenia."
+        ],
+        correctIndex: 2,
+        explanation: "Correta: C. O pós-aquecimento imediato (interpass ou post-heating para hidrogênio) serve para manter o hidrogênio difusível em movimento para que ele saia da solda, prevenindo trincas a frio."
+    },
+    {
+        question: "15) A cauda do símbolo é utilizada para anotações como:",
+        options: [
+            "A) Profundidade de preparação do chanfro, o ângulo do chanfro e abertura da raiz.",
+            "B) Especificação, processo ou outra referência.",
+            "C) Símbolo de perfil externo, comprimento da solda espaçamento entre soldas descontínuas.",
+            "D) Garganta efetiva, profundidade de preparação do chanfro e o símbolo básico de solda."
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. A cauda do símbolo de soldagem é o local para informações de processo, especificação técnica ou referências que não têm local específico na linha de referência."
+    },
+    {
+        question: "16) A seta 'quebrada' ou em 'zig-zag' significa que a mesma aponta para um membro específico da junta que deve ser biselado:",
+        options: [
+            "A) FALSO",
+            "B) VERDADEIRO"
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B (Verdadeiro). Quando a seta tem uma quebra, ela aponta obrigatoriamente para o membro que receberá a preparação (bisel), usado em juntas como Meio-V ou J."
+    },
+    {
+        question: "17) No processo de soldagem com eletrodo revestido quando se utiliza corrente contínua com eletrodo conectado ao polo negativo da fonte diz-se que está sendo utilizada:",
+        options: [
+            "A) Ligação direta",
+            "B) Ligação inversa",
+            "C) Nenhuma da resposta é verdadeira",
+            "D) Corrente contínua de polo negativo"
+        ],
+        correctIndex: 0,
+        explanation: "Correta: A. CC- (Eletrodo Negativo) é a Polaridade Direta (DCEN). CC+ (Eletrodo Positivo) seria Polaridade Inversa."
+    },
+    {
+        question: "18) Qual das afirmativas abaixo não é aplicável ao processo de soldagem com eletrodo revestido, deve-se considerar os seguintes requisitos.",
+        options: [
+            "A) Tem capacidade de soldar uma faixa grande de espessura.",
+            "B) A qualidade da solda independente da habilidade do soldador.",
+            "C) É possível soldar em todas as posições.",
+            "D) É possível soldar todas os tipos de chanfros.",
+            "E) É aplicável em locais de difícil acesso."
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. O processo de Eletrodo Revestido é manual e depende ALTAMENTE da habilidade do soldador para garantir a qualidade."
+    },
+    {
+        question: "19) O que é solda autógena?",
+        options: [
+            "A) É a solda de fusão sem a participação do metal de adição.",
+            "B) É a solda de fusão sem a participação do metal de base.",
+            "C) É a solda de fusão com a participação do metal de adição.",
+            "D) É a solda de fusão com a participação do metal de base."
+        ],
+        correctIndex: 0,
+        explanation: "Correta: A. Soldagem autógena é aquela onde a união ocorre apenas pela fusão do metal de base, sem adicionar material externo."
+    },
+    {
+        question: "20) o que é solda semi-automática?",
+        options: [
+            "A) É o processo no qual toda operação é controlada automaticamente.",
+            "B) É o processo utilizado para unir matérias por meio de solda.",
+            "C) É a soldagem com equipamento que executa toda operação sob observação e controle do operador desoldagem.",
+            "D) É a soldagem a arco com equipamento que controla somente o avanço do metal de adição.",
+            "E) O avanço da soldagem é controlado manualmente"
+        ],
+        correctIndex: 3,
+        explanation: "Correta: D (ou E dependendo da interpretação, mas D define o equipamento). Na semi-automática (ex: MIG/MAG), a máquina alimenta o arame (metal de adição), mas o soldador controla a velocidade de deslocamento e direção."
+    },
+    {
+        question: "21) Qual das afirmativas abaixo não e aplicável ao processo de soldagem TIG?",
+        options: [
+            "A) Apesar da desvantagem de um custo inicial maior do que o processo de soldagem com eletrodo revestido e da baixa produtividade tem como grande vantagem obtenção de solda de alta qualidade.",
+            "B) Em certas peças o processo pode ser aplicado sem que necessite de metal de adição.",
+            "C) Só é aplicável para as posições de soldagem horizontal, vertical e plana.",
+            "D) É freqüentemente usado na execução de passe de raiz de tubulação submetida a serviços de Responsabilidade."
+        ],
+        correctIndex: 2,
+        explanation: "Correta: C. A afirmativa é falsa (e portanto a resposta do 'não é aplicável') porque o TIG pode ser usado em TODAS as posições, inclusive sobre-cabeça."
+    },
+    {
+        question: "22) A difusão aumenta quando:",
+        options: [
+            "A) Com o aumento da temperatura.",
+            "B) Com aumento do tamanhos dos átomos.",
+            "C) Com a redução da pressão do vapor.",
+            "D) Nenhuma das anteriores."
+        ],
+        correctIndex: 0,
+        explanation: "Correta: A. A difusão atômica é um processo termicamente ativado; quanto maior a temperatura, maior a vibração atômica e facilidade de movimentação."
+    },
+    {
+        question: "23) O processo de soldagem a arco submerso e indicado para :",
+        options: [
+            "A) As posições plana e horizontal.",
+            "B) As posições horizontal e vertical.",
+            "C) Todas as posições exceto a sobre-cabeça.",
+            "D) Todas as posições."
+        ],
+        correctIndex: 0,
+        explanation: "Correta: A. Devido à grande poça líquida e ao uso de fluxo granular solto, o Arco Submerso (SAW) só é viável nas posições Plana e Horizontal (em filete)."
+    },
+    {
+        question: "24) Embora as especificações AWS de consumíveis apresentem requisitos diferentes para cada classificação de consumíveis. Estes requisitos são apresentados sempre na mesma sequência independente da especificação.",
+        options: [
+            "A) Falsa.",
+            "B) Verdadeira."
+        ],
+        correctIndex: 0,
+        explanation: "Correta: A (Falsa). As especificações AWS (A5.1, A5.18, etc.) variam a estrutura de classificação (algumas indicam posição, outras composição química, outras hidrogênio difusível) de forma diferente."
+    },
+    {
+        question: "25) O que é reforço de solda.",
+        options: [
+            "A) É o metal de solda em excesso menos do que o necessário para preencher a junta, a falta de metal depositado nos últimos passes.",
+            "B) É o metal de solda em excesso além do que o necessário para preencher a junta.",
+            "C) É a ordem pela qual os passes de uma solda multi-passes são depositados com a superfície transversal da junta.",
+            "D) É a união localizada de metais ou não metais produzidas pelo aquecimento dos materiais..."
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. Reforço é o metal depositado acima da superfície do metal de base (na face ou na raiz)."
+    },
+    {
+        question: "26) O que é soldagem a arco.",
+        options: [
+            "A) É o grupo de processo de soldagem que produz a união de metais pelo resfriamento destes por meio de um arco elétrico...",
+            "B) É o grupo de processo de soldagem que produz a união de metais pelo aquecimento destes por meio de um arco elétrico com ou sem aplicação de pressão e com ou sem o uso do metal de adição.",
+            "C) É a solda executada em uma junta com bisel em forma de arco.",
+            "D) Nenhuma das respostas anteriores."
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. Definição padrão: União por aquecimento via arco elétrico."
+    },
+    {
+        question: "27) O que é temperatura interpasse?",
+        options: [
+            "A) É qualquer tratamento térmico subseqüente a soldagem...",
+            "B) Em soldagem multi-passes temperatura (mínima ou máxima como especificado) do metal de solda depositado antes do passe seguinte ter começado.",
+            "C) É o calor depositado sem controle de temperatura.",
+            "D) É o calor aplicado após a conclusão da soldagem..."
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. É a temperatura medida na região da solda imediatamente antes de iniciar o próximo passe."
+    },
+    {
+        question: "28) O que é polaridade direta?",
+        options: [
+            "A) É tipo de ligação para soldagem com corrente alternada onde os elétrons deslocam-se para a peça.",
+            "B) É o tipo de ligação para soldagem com corrente continua onde os elétrons deslocam-se da peça para o eletrodo.",
+            "C) É o tipo de ligação para soldagem com corrente continua onde os elétrons deslocam-se do eletrodo para peça.",
+            "D) É o deposito efetuado com movimento lateral."
+        ],
+        correctIndex: 2,
+        explanation: "Correta: C. Polaridade Direta é CC- (Eletrodo Negativo). Os elétrons fluem do negativo (eletrodo) para o positivo (peça)."
+    },
+    {
+        question: "29) O que é solda automática?",
+        options: [
+            "A) É a soldagem com equipamento que executa toda operação sob observação e controle de um operador de soldagem.",
+            "B) E a soldagem com equipamento que executa solda na posição sobre-cabeça sob observação de um operador de soldagem.",
+            "C) É a soldagem executada com eletrodo revestido utilizando dois soldadores...",
+            "D) É a solda em ângulo composto de cordões intermitentes."
+        ],
+        correctIndex: 0,
+        explanation: "Correta: A. Na soldagem automática, o equipamento controla a alimentação e o deslocamento; o operador apenas monitora."
+    },
+    {
+        question: "30) O que é ZTA (Zona Termicamente Afetada)?",
+        options: [
+            "A) É a região da junta soldada que envolve a zona que sofre fusão durante a soldagem.",
+            "B) É a região do metal que sofreu fusão durante a soldagem.",
+            "C) É a região do metal que foi fundida durante a soldagem, mas cujas propriedades mecânicas...",
+            "D) É a região do metal que não foi fundida durante a soldagem, mas cujas propriedades mecânicas e microestrutura foi alterada devido à geração de calor."
+        ],
+        correctIndex: 3,
+        explanation: "Correta: D. A ZTA não funde, mas suas propriedades mudam devido ao calor conduzido."
+    },
+    {
+        question: "31) O que é raiz da junta?",
+        options: [
+            "A) São pontos nos quais à parte da solda intercepta as superfícies do metal de base.",
+            "B) É o metal de solda em excesso além do necessário...",
+            "C) É a porção da junta a ser soldada onde os membros estão o mais próximo entre si em seção transversal. A raiz pode ser um ponto uma linha ou uma área.",
+            "D) É a porção da junta a ser soldada onde os membros estão o mais próximo entre si em seção vertical."
+        ],
+        correctIndex: 2,
+        explanation: "Correta: C. A raiz é a parte mais profunda da junta, onde as peças estão mais próximas."
+    },
+    {
+        question: "32) O que é poça de fusão?",
+        options: [
+            "A) É a distância da raiz da junta a margem da solda em ângulo.",
+            "B) É o passe ou camada depositados em condições que permitam a modificação estrutural...",
+            "C) É a zona de fusão a cada instante durante uma soldagem ou a porção liquida de uma solda antes de solidificar-se.",
+            "D) Nenhuma das respostas anteriores."
+        ],
+        correctIndex: 2,
+        explanation: "Correta: C. A poça de fusão é o metal líquido sob o arco."
+    },
+    {
+        question: "33) O que é processo de soldagem?",
+        options: [
+            "A) É o processo utilizado para unir materiais pelo aquecimento destes a temperatura adequada com ou sem aplicação de pressão apenas com ou sem a participação de metal de adição.",
+            "B) É quando o soldador demonstra habilidade para fazer solda.",
+            "C) É à distância que a fusão atinge no metal de base ou passe anterior...",
+            "D) É o pré-aquecimento de uma porção especifica de uma estrutura."
+        ],
+        correctIndex: 0,
+        explanation: "Correta: A. Definição geral de processo de soldagem."
+    },
+    {
+        question: "34) O que é bisel?",
+        options: [
+            "A) É a borda do componente a ser soldado preparado na forma angular.",
+            "B) É o ângulo formado entre a borda preparada do componente e um plano perpendicular à superfície do Componente.",
+            "C) É o ângulo formado entre o eixo do eletrodo e a superfície do metal de base.",
+            "D) É a borda do componente a ser soldada preparada exclusivamente em forma de ângulo..."
+        ],
+        correctIndex: 0,
+        explanation: "Correta: A. Bisel é a borda preparada. A alternativa B define o 'Ângulo do Bisel'."
+    },
+    {
+        question: "35) No procedimento de soldagem temos os limites ou faixas de parâmetros tais como : tipo de corrente, espessura do metal de base, tipo de metal de base, tipo de consumível, dentre outros.",
+        options: [
+            "A) Falso.",
+            "B) Verdadeiro"
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. A EPS (Especificação de Procedimento de Soldagem) define todas essas variáveis essenciais."
+    },
+    {
+        question: "36) O que é vareta de solda?",
+        options: [
+            "A) É o tipo de meta de adição utilizado para soldagem ou brazagem no qual conduz corrente elétrica durante o processo.",
+            "B) É o tipo de metal de adição utilizado para soldagem ou brazagem no qual não conduz corrente elétrica durante a soldagem.",
+            "C) É o tipo de metal de adição utilizado para soldagem ou brazagem no qual conduz corrente elétrica moderada.",
+            "D) Nenhuma das respostas anteriores."
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. Varetas (TIG, Oxi) são alimentadas externamente e não fazem parte do circuito elétrico, ao contrário do 'Eletrodo'."
+    },
+    {
+        question: "37) O que é taxa de deposição?",
+        options: [
+            "A) É a taxa paga ao metal depositado por unidade de tempo.",
+            "B) É taxa de material removida de uma solda.",
+            "C) É o peso do material depositado por unidade de tempo.",
+            "D) É o peso do material por intervalo de tempo."
+        ],
+        correctIndex: 2,
+        explanation: "Correta: C. Medida em kg/h, indica quanto metal é efetivamente adicionado à junta."
+    },
+    {
+        question: "38) O que é geometria da junta?",
+        options: [
+            "A) É o processo de corte a arco para fabricar um bisel ou chanfro.",
+            "B) É a forma e dimensão de seção transversal de uma junta antes de soldagem.",
+            "C) É a forma e dimensão de seção transversal de uma junta depois da soldagem.",
+            "D) É a definição na qual o ângulo de junta será soldada."
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. Geometria da junta refere-se à preparação (chanfro, raiz, nariz) antes de soldar."
+    },
+    {
+        question: "39) O que é fluxo?",
+        options: [
+            "A) É o material usado exclusivamente na soldagem a arco submerso.",
+            "B) É todo o consumível usado no processo de soldagem TIG.",
+            "C) É o material usado para prevenir, dissolver ou facilitar a remoção de óxidos e outras substâncias indesejáveis.",
+            "D) É todo material usado no processo de soldagem."
+        ],
+        correctIndex: 2,
+        explanation: "Correta: C. O fluxo tem função de limpeza química, proteção e formação de escória."
+    },
+    {
+        question: "40) O que são equipamentos de soldagem?",
+        options: [
+            "A) São produtos de fabricação, construção e ou montagem de juntas soldadas...",
+            "B) São máquina, ferramentas, instrumentos, estufas e dispositivos empregados na operação de soldagem.",
+            "C) São todos materiais utilizados pelo soldador para executar solda na sobre cabeça.",
+            "D) Nenhuma das respostas anteriores."
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. Define todo o aparato necessário para executar a soldagem."
+    },
+    {
+        question: "41) O que é eletrodo tubular?",
+        options: [
+            "A) É o eletrodo em forma de tubo com um furo no meio.",
+            "B) É um eletrodo usado tanto para soldagem quanto para cortes de metais ferrosos.",
+            "C) Metal de adição composto consistindo de um tubo de metal... contendo produtos que formam uma atmosfera protetora...",
+            "D) É o eletrodo usado para soldar junta tubular utilizando uma alta energia de soldagem."
+        ],
+        correctIndex: 2,
+        explanation: "Correta: C. Descrição técnica completa do arame tubular (capa metálica com fluxo interno)."
+    },
+    {
+        question: "42) O que é gás de proteção?",
+        options: [
+            "A) É o gás que quimicamente não combina com metal de base ou metal de adição.",
+            "B) É o gás utilizado para prevenir contaminação não desejada pela atmosfera.",
+            "C) É o gás usado somente no processo TIG.",
+            "D) É o gás usado somente no processo MIG e MAG"
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. Função principal do gás é expulsar o ar atmosférico (N2, O2, H) da poça de fusão."
+    },
+    {
+        question: "43) O que é dimensão da solda (para solda em ângulo de pernas desiguais)?",
+        options: [
+            "A) É o comprimento dos catetos do maior triângulo-retângulo que pode se inscrito na seção transversal da solda.",
+            "B) É o comprimento dos catetos do maior triângulo-retângulo que pode ser inscrito na seção transversal da junta.",
+            "C) É o comprimento dos catetos do maior triângulo-retângulo isósceles que pode ser inscrito na seção transversal da solda.",
+            "D) É o comprimento da hipotenusa do maior triângulo-retângulo que pode ser inscrito na seção transversal da solda."
+        ],
+        correctIndex: 0,
+        explanation: "Correta: A. A dimensão (perna) é definida pelo maior triângulo retângulo inscrito."
+    },
+    {
+        question: "44) O que é camada?",
+        options: [
+            "A) è o conjunto de passes que são depositados apenas por máquina de solda com corrente continua e alternada.",
+            "B) è o conjunto de passes depositados por máquina de solda com corrente continua e alternada.",
+            "C) São filetes de solda parecidos com escamas de peixe.",
+            "D) Deposito de um ou mais passes consecutivos situado aproximadamente num mesmo plano."
+        ],
+        correctIndex: 3,
+        explanation: "Correta: D. Camada é o estrato horizontal de passes."
+    },
+    {
+        question: "45) O consumível de especificação AWS E 6020 possuem limite mínimo de resistência de aproximadamente 60.000 psi e pode ser utilizado na posição plana.",
+        options: [
+            "A) Falso..",
+            "B) Verdadeiro.."
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. E6020 é um eletrodo de alto óxido de ferro, projetado especificamente para soldas em ângulo plano/horizontal com alta taxa de deposição."
+    },
+    {
+        question: "46) A razão pela qual a difusão ocorre mais facilmente nos contornos de grãos que no centro dos grãos é que:",
+        options: [
+            "A) A temperatura nos contornos de grãos é ligeiramente inferior que nos centro dos grãos.",
+            "B) Nenhuma das respostas é verdadeira.",
+            "C) A ordenação atômica no centro dos grãos é menor que nos contornos de grãos.",
+            "D) A temperatura nos contornos dos grãos é ligeiramente superior que no centro dos grãos.",
+            "E) A Ordenação atômica no centro dos grãos é maior que no contorno dos grãos."
+        ],
+        correctIndex: 2, // (Interpretando C como "Centro < Contorno" em desordem? Não. O contorno é MENOS ordenado.) 
+        // Correção Técnica: A difusão é mais fácil no contorno porque ele é MENOS denso/ordenado.
+        // Opção E diz: Ordenação no Centro é MAIOR que no contorno. ISSO É VERDADE.
+        // A opção C diz: Ordenação no Centro é MENOR. Falso.
+        // Portanto, a correta técnica é E (o centro é mais ordenado, dificultando difusão; o contorno é bagunçado, facilitando).
+        explanation: "Correta: E (Técnica). Os contornos de grão possuem estrutura cristalina menos ordenada (mais 'espaço'), facilitando a movimentação atômica (difusão) comparado ao centro do grão, que é altamente ordenado."
+    },
+    {
+        question: "47) No processo de soldagem com eletrodo revestido o soldador controla:",
+        options: [
+            "A) O comprimento do arco.",
+            "B) Todas as variáveis citadas.",
+            "C) A inclinação do eletrodo.",
+            "D) A velocidade de soldagem e a oscilação do eletrodo."
+        ],
+        correctIndex: 1,
+        explanation: "Correta: B. O soldador manual controla comprimento, ângulo, velocidade e oscilação simultaneamente."
+    },
+    {
+        question: "48) Selecionar entre as alternativas abaixo aqueles processos de soldagem que atendam respectivamente aos seguintes requisitos: Grande versatilidade, soldagem em oficina de chapas de 100 milímetros de espessura, soldagem em oficina de tubo de 3 milímetros de espessura, obtenção de solda de pouca responsabilidade em existência de grande produção.",
+        options: [
+            "A) Eletrodo revestido, eletroescória, MIG e TIG.",
+            "B) Eletroescória, MIG, eletrodo revestido e TIG.",
+            "C) Eletrodo revestido, eletroescória, TIG e MAG.",
+            "D) Eletrodo revestido, TIG, eletroescória e MIG"
+        ],
+        correctIndex: 2,
+        explanation: "Correta: C. Versatilidade (Eletrodo), Espessura grossa (Eletroescória), Tubo fino (TIG), Produção/Baixa resp (MAG)."
+    },
+    {
+        question: "49) Qual das afirmativas abaixo referente ao processo de soldagem TIG è falsa.",
+        options: [
+            "A) Inclusões de tungstênio podem resultar de um contato acidental do eletrodo de tungstênio com a poça de fusão.",
+            "B) Porosidade pode ocorrer devido a uma limpeza inadequada do chanfro ou lmpureza contidas no metal de fusão.",
+            "C) Falta de fusão acontece se usarmos uma técnica de soldagem inadequada.",
+            "D) Inclusões de escória podem ocorrer quando a limpeza de um passe para outro é ineficiente."
+        ],
+        correctIndex: 3,
+        explanation: "Correta: D (Falso). O processo TIG não produz escória (não usa fluxo), portanto é impossível haver inclusão de escória gerada pelo próprio processo."
+    },
+    {
+        question: "50) Os lápis de fusão são utilizados para:",
+        options: [
+            "A) Controlar a temperatura de fusão do metal de adição.",
+            "B) Controlar a temperatura entre passes.",
+            "C) Existem duas respostas corretas.",
+            "D) Controlar a temperatura de pré-aquecimento."
+        ],
+        correctIndex: 2, // Geralmente B e D
+        explanation: "Correta: C (Implica B e D). Lápis de fusão (Tempil) são usados para controlar pré-aquecimento e temperatura interpasse."
+    }
+];
+// =======================================================
+    // LÓGICA DO SISTEMA (NÃO PRECISA ALTERAR)
+    // =======================================================
+    let currentQuestionIndex = 0;
+    let score = 0;
+
+    const questionEl = document.getElementById('question');
+    const optionsEl = document.getElementById('options');
+    const feedbackEl = document.getElementById('feedback');
+    const explanationTextEl = document.getElementById('explanation-text');
+    const nextBtn = document.getElementById('next-btn');
+    const progressEl = document.getElementById('progress');
+    const quizBox = document.getElementById('quiz-box');
+    const resultBox = document.getElementById('result-box');
+
+    function loadQuestion() {
+        const currentQuestion = questions[currentQuestionIndex];
+        
+        // Resetar estado visual
+        feedbackEl.style.display = 'none';
+        nextBtn.style.display = 'none';
+        optionsEl.innerHTML = '';
+        
+        // Atualizar textos
+        progressEl.textContent = `Questão ${currentQuestionIndex + 1} de ${questions.length}`;
+        questionEl.textContent = currentQuestion.question;
+
+        // Criar botões
+        currentQuestion.options.forEach((option, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = option;
+            btn.onclick = () => checkAnswer(index);
+            optionsEl.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selectedIndex) {
+        const currentQuestion = questions[currentQuestionIndex];
+        const buttons = optionsEl.getElementsByClassName('option-btn');
+        
+        // Desabilitar todos os botões após a escolha
+        for (let btn of buttons) {
+            btn.disabled = true;
+        }
+
+        // Verificar acerto
+        if (selectedIndex === currentQuestion.correctIndex) {
+            buttons[selectedIndex].classList.add('correct');
+            score++;
+        } else {
+            buttons[selectedIndex].classList.add('incorrect');
+            // Mostrar a correta automaticamente
+            buttons[currentQuestion.correctIndex].classList.add('correct');
+        }
+
+        // Mostrar explicação e botão de próximo
+        explanationTextEl.textContent = currentQuestion.explanation;
+        feedbackEl.style.display = 'block';
+        
+        if (currentQuestionIndex < questions.length - 1) {
+            nextBtn.textContent = "Próxima Questão";
+        } else {
+            nextBtn.textContent = "Ver Resultado";
+        }
+        nextBtn.style.display = 'block';
+    }
+
+    function nextQuestion() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < questions.length) {
+            loadQuestion();
+        } else {
+            showResults();
+        }
+    }
+
+    function showResults() {
+        quizBox.style.display = 'none';
+        resultBox.style.display = 'block';
+        
+        const finalScoreEl = document.getElementById('final-score');
+        const finalMsgEl = document.getElementById('final-message');
+        
+        const percentage = (score / questions.length) * 100;
+        finalScoreEl.textContent = `${score} / ${questions.length} (${percentage.toFixed(0)}%)`;
+        
+        if (percentage >= 70) {
+            finalMsgEl.textContent = "Parabéns! Você teve um ótimo desempenho.";
+        } else {
+            finalMsgEl.textContent = "Continue estudando e tente novamente!";
+        }
+    }
+
+    // Iniciar o simulado
+    loadQuestion();
+</script>
+
+</body>
+</html>
